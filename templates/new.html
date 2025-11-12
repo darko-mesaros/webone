@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<form action="/contacts/new" method="post">
+  <fieldset>
+    <legend>Contact Values</legend>
+    <p>
+      <label for="email">Email</label>
+      <input type="email" name="email" id="email" 
+        value="{% if let Some(c) = contact %}{{ c.email }}{% endif %}">
+      <span class="error"></span>
+    </p>
+    <p>
+      <label for="first_name">First Name</label>
+      <input type="text" name="first_name" id="first_name" 
+        value="{% if let Some(c) = contact %}{{ c.first_name }}{% endif %}">
+      <span class="error"></span>
+    </p>
+    <p>
+      <label for="last_name">Last Name</label>
+      <input type="text" name="last_name" id="last_name" 
+        value="{% if let Some(c) = contact %}{{ c.last_name }}{% endif %}">
+      <span class="error"></span>
+    </p>
+    <p>
+      <label for="phone_number">Phone</label>
+      <input type="text" name="phone_number" id="phone_number" 
+        value="{% if let Some(c) = contact %}{{ c.phone_number }}{% endif %}">
+      <span class="error"></span>
+    </p>
+    <button>Save</button>
+  </fieldset>
+</form>
+{% endblock content %}

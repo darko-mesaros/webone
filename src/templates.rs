@@ -1,0 +1,32 @@
+use askama::Template;
+
+use crate::contacts::{Contact, NewContact};
+
+#[derive(Template)]
+#[template(path = "index.html")]
+pub struct IndexTemplate {
+    pub q: String,
+    pub contacts: Vec<Contact>,
+}
+
+#[derive(Template)]
+#[template(path = "new.html")]
+pub struct NewContactTemplate {
+    pub contact: Option<NewContact>,
+}
+
+#[derive(Template)]
+#[template(path = "show.html")]
+pub struct ShowContactTemplate {
+    pub contact: Contact,
+}
+#[derive(Template)]
+#[template(path = "edit.html")]
+pub struct EditContactTemplate {
+    pub contact: Contact,
+}
+#[derive(Template)]
+#[template(path = "error.html")]
+pub struct Error5xxTemplate {
+    pub error: String,
+}
