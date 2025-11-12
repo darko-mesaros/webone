@@ -21,12 +21,29 @@
       <td>{{ contact.first_name }}</td>
       <td>{{ contact.last_name }}</td>
       <td>{{ contact.phone_number }}</td>
-      <td>{{ contact.email }}</td>
+      <td><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></td>
       <td><a href="/contacts/{{ contact.id }}/edit">Edit</a>
         <a href="/contacts/{{ contact.id }}">View</a>
       </td>
     </tr>
     {% endfor %}
+    {% if contacts.len() == per_page as usize %}
+    <tr>
+      <td colspan="5" style="text-align: center">
+        <span hx-target="closest tr"
+                hx-trigger="revealed"
+                hx-swap="outerHTML"
+                hx-select="tbody > tr"
+                {% if q.is_empty()%}
+                hx-get="/contacts?page={{ page + 1}}">
+                {% else %}
+                hx-get="/contacts?page={{ page + 1}}&q={{q}}">
+                {% endif %}
+          Loading more
+        </span>
+      </td>
+    </tr>
+    {% endif %}
   </tbody>
 </table>
 <p>

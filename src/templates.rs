@@ -7,6 +7,8 @@ use crate::contacts::{Contact, NewContact};
 pub struct IndexTemplate {
     pub q: String,
     pub contacts: Vec<Contact>,
+    pub page: i64,
+    pub per_page: i64,
 }
 
 #[derive(Template)]

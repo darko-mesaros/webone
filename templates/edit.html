@@ -6,7 +6,7 @@
     <legend>Contact Values</legend>
     <p>
       <label for="email">Email</label>
-      <input type="text" name="email" placeholder="Email"
+      <input type="email" name="email" placeholder="Email"
                                                     value="{{contact.email}}">
       <span class="error"></span>
     </p>
@@ -31,9 +31,12 @@
     <button>Save</button>
   </fieldset>
 </form>
-<form action="/contacts/{{contact.id}}/delete" method="post">
-  <button>Delete Contact</button>
-</form>
+<button hx-delete="/contacts/{{contact.id}}"
+  hx-target="body"
+  hx-push-url="true"
+  hx-confirm="Are you sure you want to delete this contact?">
+  Delete Contact
+</button>
 <p>
   <a href="/contacts">Back</a>
 </p>
