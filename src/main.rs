@@ -9,6 +9,8 @@ use axum::{
 };
 use serde::Deserialize;
 use sqlx::SqlitePool;
+use webone::templates::ErrorMessageTemplate;
+use webone::templates::SuccessRedirectTemplate;
 use webone::{
     contacts::{Contact, NewContact},
     templates::{EditContactTemplate, IndexTemplate, NewContactTemplate, ShowContactTemplate},
@@ -64,10 +66,26 @@ async fn contacts(
 async fn post_new_contact(
     State(state): State<AppState>,
     Form(new_contact): Form<NewContact>,
-) -> Result<Redirect, AppError> {
+//) -> Result<Redirect, AppError> {
+) -> Result<Html<String>, AppError> {
     // Axums Form extractor handles the NewContact
-    Contact::create(&state.db, new_contact).await?;
-    Ok(Redirect::to("/contacts"))
+    // Validate fields
+    let valid_email = Contact::validate_email(&state.db, new_contact.email.as_str()).await?;
+    let valid_phone = Contact::validate_phone(&state.db, new_contact.phone_number.as_str()).await?;
+
+    if valid_email || valid_phone {
+        let error_message = ErrorMessageTemplate {
+            error_message: "Email and/or phone number is already in use. Contact NOT SAVED".into()
+        };
+        let html = error_message.render()?;
+        Ok(Html(html))
+    } else {
+        //Err(anyhow!("The email and/or phone number is already in use").into())
+        Contact::create(&state.db, new_contact).await?;
+        let success_template = SuccessRedirectTemplate { success_message: "Contact succesfully created. Redirecting".into()};
+        let html = success_template.render()?;
+        Ok(Html(html))
+    }
 }
 
 #[axum::debug_handler]
@@ -138,6 +156,9 @@ async fn validate_input(
 }
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    // Tracing
+    tracing_subscriber::fmt::init();
+
     // Connect to Database:
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
     let pool = SqlitePool::connect(&database_url)

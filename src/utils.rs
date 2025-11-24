@@ -4,6 +4,8 @@ use axum::{
     response::{Html, IntoResponse},
 };
 
+use tracing::error;
+
 use crate::templates::Error5xxTemplate;
 
 pub struct AppError(anyhow::Error);
@@ -15,9 +17,15 @@ impl IntoResponse for AppError {
             error: self.0.to_string(),
         };
         match template.render() {
-            Ok(html) => (StatusCode::INTERNAL_SERVER_ERROR, Html(html)).into_response(),
+            Ok(html) => {
+                error!("Internal Application Error: {}", self.0.to_string());
+                (StatusCode::INTERNAL_SERVER_ERROR, Html(html)).into_response()
+            }
             // This has failed catastrophically - just return some string
-            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response(),
+            Err(_) => {
+                error!("Internal Server Error: {}", self.0.to_string());
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+            }
         }
     }
 }

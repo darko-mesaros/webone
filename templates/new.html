@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<form action="/contacts/new" method="post">
+<form hx-post="/contacts/new" hx-target="#result">
   <fieldset>
     <legend>Contact Values</legend>
     <p>
@@ -39,6 +39,7 @@
       <span class="error color bad"></span>
     </p>
     <button>Save</button>
+    <div id="result"></div>
   </fieldset>
 </form>
 {% endblock content %}

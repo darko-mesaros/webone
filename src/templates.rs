@@ -32,3 +32,14 @@ pub struct EditContactTemplate {
 pub struct Error5xxTemplate {
     pub error: String,
 }
+#[derive(Template)]
+#[template(path = "success_redirect.html")]
+pub struct SuccessRedirectTemplate {
+    pub success_message: String,
+}
+
+#[derive(Template)]
+#[template(path = "error_message.html")]
+pub struct ErrorMessageTemplate {
+    pub error_message: String,
+}
