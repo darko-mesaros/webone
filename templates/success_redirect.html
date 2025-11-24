@@ -1,1 +1,4 @@
-<div class="success color bg ok" hx-get="/contacts" hx-trigger="load delay:2s" hx-target="body">{{ success_message }}</div>
+<div class="ok box" hx-get="/contacts" hx-trigger="load delay:2s" hx-target="body">
+  <strong class="titlebar">Success</strong>
+  <p>{{ success_message }}</p>
+</div>
