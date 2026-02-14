@@ -30,7 +30,7 @@ pub struct Contact {
 }
 
 impl Contact {
-    /// Update the existing contact from a NewContact. This is useful when updating contacts via
+    /// Update the existing contact from a `NewContact` struct. This is useful when updating contacts via
     /// the edit form as we don't have to pass the entire Contact (id, created_at)
     pub fn update_from(&mut self, new: NewContact) {
         self.first_name = new.first_name;

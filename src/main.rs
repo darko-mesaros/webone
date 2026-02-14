@@ -9,6 +9,7 @@ use axum::{
 };
 use serde::Deserialize;
 use sqlx::SqlitePool;
+use tower_http::services::ServeDir;
 use webone::templates::ErrorMessageTemplate;
 use webone::templates::SuccessRedirectTemplate;
 use webone::{
@@ -39,6 +40,9 @@ async fn index() -> impl IntoResponse {
     Redirect::permanent("/contacts")
 }
 
+
+/// Template function: Gets all contacts and renders them to the HTML. Limits the amount of
+/// contacts displayed based on the `PER_PAGE` constant.
 #[axum::debug_handler]
 async fn contacts(
     State(state): State<AppState>,
@@ -62,11 +66,12 @@ async fn contacts(
     Ok((StatusCode::OK, Html(html)))
 }
 
+/// New contact creation from form data. It performs checks to verify if the email and phone are
+/// unique. Otherwise it creates the contact, flashes the success message on screen and redirects.
 #[axum::debug_handler]
 async fn post_new_contact(
     State(state): State<AppState>,
     Form(new_contact): Form<NewContact>,
-//) -> Result<Redirect, AppError> {
 ) -> Result<Html<String>, AppError> {
     // Axums Form extractor handles the NewContact
     // Validate fields
@@ -88,12 +93,16 @@ async fn post_new_contact(
     }
 }
 
+
+/// Template function: Renders the new contact creation HTML.
 #[axum::debug_handler]
 async fn get_new_contact() -> Result<(StatusCode, Html<String>), AppError> {
     let new_template = NewContactTemplate { contact: None };
     let html = new_template.render()?;
     Ok((StatusCode::OK, Html(html)))
 }
+
+/// Template function: Renders the individual contact HTML with the `Contact` data.
 #[axum::debug_handler]
 async fn show_contact(
     State(state): State<AppState>,
@@ -104,6 +113,8 @@ async fn show_contact(
     let html = show_template.render()?;
     Ok((StatusCode::OK, Html(html)))
 }
+
+/// Template function: Renders the Edit contact HTML with the `Contact` data.
 #[axum::debug_handler]
 async fn get_edit_contact(
     State(state): State<AppState>,
@@ -114,6 +125,9 @@ async fn get_edit_contact(
     let html = edit_template.render()?;
     Ok((StatusCode::OK, Html(html)))
 }
+/// Updates existing contact by passing all the parameters, and updating the `Contact` struct from
+/// the new data. Then calling the `.update()` method with `&self` to make the changes in the
+/// database.
 #[axum::debug_handler]
 async fn post_edit_contact(
     State(state): State<AppState>,
@@ -127,6 +141,10 @@ async fn post_edit_contact(
     Ok(Redirect::to("/contacts"))
 }
 
+/// Deletes contact by extracting the `id` from the path. 
+///
+/// Example usage: 
+/// By passing on a HTTP `DELETE` method to the `/contacts/{id}` path, we can trigger this function.
 #[axum::debug_handler]
 async fn delete_contact(
     State(state): State<AppState>,
@@ -137,6 +155,12 @@ async fn delete_contact(
     Ok(Redirect::to("/contacts"))
 }
 
+/// Validates input parameters by passing them onto a query that checks if the value already exists
+/// in the database. Returns simple error HTML if this is true.
+///
+/// Example usage:
+/// A GET request from `HTMX` when entering an email into a form. And replace the `.error` div with
+/// the returned HTML.
 #[axum::debug_handler]
 async fn validate_input(
     State(state): State<AppState>,
@@ -146,12 +170,20 @@ async fn validate_input(
     // Because we want to return some Html only for that error span
     match (&validation_params.email, &validation_params.phone_number) {
         (Some(email), None) if Contact::validate_email(&state.db, email).await? => {
-            Ok((StatusCode::OK, Html("This email already exists in your contacts.")))
+            Ok((StatusCode::OK, Html(
+                r#"⛔ This email already exists in your contacts.
+<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
+            )))
         }
         (None, Some(phone_number)) if Contact::validate_phone(&state.db, phone_number).await? => {
-            Ok((StatusCode::OK, Html("This phone number already exists in your contacts.")))
+            Ok((StatusCode::OK, Html(
+                r#"⛔ This phone number already exists in your contacts.
+<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
+            )))
         }
-        _ => Ok((StatusCode::OK, Html(""))),
+        _ => Ok((StatusCode::OK, Html(
+            r#"<button id="submit-btn" hx-swap-oob="true">Save</button>"#
+        ))),
     }
 }
 #[tokio::main]
@@ -167,16 +199,19 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Set the app state
     let state = AppState { db: pool };
+
+    // Create the axum router
     let app = Router::new()
-        .route("/", get(index))
-        .route("/contacts", get(contacts))
-        .route("/contacts/new", post(post_new_contact).get(get_new_contact))
-        .route("/contacts/{id}", get(show_contact).delete(delete_contact))
-        .route(
+        .route("/", get(index)) // Main Page redirects to /contacts
+        .route("/contacts", get(contacts)) // Shows the contaxt
+        .route("/contacts/new", post(post_new_contact).get(get_new_contact)) // New POST endpoint
+        .route("/contacts/{id}", get(show_contact).delete(delete_contact)) // Contact GET/DELETE
+        .route( // Edit contact POST endpoint
             "/contacts/{id}/edit",
             post(post_edit_contact).get(get_edit_contact),
         )
-        .route("/contacts/validate", get(validate_input))
+        .route("/contacts/validate", get(validate_input)) // Endpoint for validating input
+        .nest_service("/static", ServeDir::new("static")) // Serve static content
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2911").await.unwrap();
