@@ -155,36 +155,60 @@ async fn delete_contact(
     Ok(Redirect::to("/contacts"))
 }
 
-/// Validates input parameters by passing them onto a query that checks if the value already exists
-/// in the database. Returns simple error HTML if this is true.
+/// Validates input parameters by checking if email and/or phone already exist in the database.
+/// Returns form-level error HTML and updates the submit button state via OOB swap.
+///
+/// This validates BOTH fields together to avoid race conditions where fixing one field
+/// might incorrectly enable the button while the other field is still invalid.
 ///
 /// Example usage:
-/// A GET request from `HTMX` when entering an email into a form. And replace the `.error` div with
-/// the returned HTML.
+/// A GET request from `HTMX` when entering an email or phone into a form. The response
+/// replaces the `#form-errors` div and updates the submit button via `hx-swap-oob`.
 #[axum::debug_handler]
 async fn validate_input(
     State(state): State<AppState>,
-    validation_params: Query<ValidateParams>,
-) -> Result<(StatusCode, Html<&'static str>), AppError> {
-    // Note: This can only ever take one parameter from teh ValidateParams struct.
-    // Because we want to return some Html only for that error span
-    match (&validation_params.email, &validation_params.phone_number) {
-        (Some(email), None) if Contact::validate_email(&state.db, email).await? => {
-            Ok((StatusCode::OK, Html(
-                r#"⛔ This email already exists in your contacts.
-<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
-            )))
+    Query(params): Query<ValidateParams>,
+) -> Result<(StatusCode, Html<String>), AppError> {
+    // Validate both fields (either may be None if not yet entered)
+    let email_exists = match &params.email {
+        Some(email) if !email.is_empty() => {
+            Contact::validate_email(&state.db, email).await?
         }
-        (None, Some(phone_number)) if Contact::validate_phone(&state.db, phone_number).await? => {
-            Ok((StatusCode::OK, Html(
-                r#"⛔ This phone number already exists in your contacts.
-<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
-            )))
+        _ => false,
+    };
+
+    let phone_exists = match &params.phone_number {
+        Some(phone) if !phone.is_empty() => {
+            Contact::validate_phone(&state.db, phone).await?
         }
-        _ => Ok((StatusCode::OK, Html(
+        _ => false,
+    };
+
+    // Build error message and button state based on combined validation
+    let (error_msg, button_html) = match (email_exists, phone_exists) {
+        (true, true) => (
+            "⛔ Email and phone number already exist in your contacts",
+            r#"<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
+        ),
+        (true, false) => (
+            "⛔ This email already exists in your contacts",
+            r#"<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
+        ),
+        (false, true) => (
+            "⛔ This phone number already exists in your contacts",
+            r#"<button id="submit-btn" hx-swap-oob="true" disabled class="btn-disabled">Cannot save</button>"#
+        ),
+        (false, false) => (
+            "",  // No error
             r#"<button id="submit-btn" hx-swap-oob="true">Save</button>"#
-        ))),
-    }
+        ),
+    };
+
+    // Return error message (goes to #form-errors) + OOB button update
+    Ok((StatusCode::OK, Html(format!(
+        r#"{}<span hx-swap-oob="true" id="form-errors">{}</span>"#,
+        button_html, error_msg
+    ))))
 }
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {

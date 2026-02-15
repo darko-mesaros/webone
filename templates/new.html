@@ -4,39 +4,41 @@
 <form hx-post="/contacts/new" hx-target="#result">
   <fieldset>
     <legend>Contact Values</legend>
+    
+    <!-- Form-level error display -->
+    <div id="form-errors" class="error color bad"></div>
+    
     <p>
       <label for="email">Email</label>
       <input type="email" name="email" id="email" 
         hx-get="/contacts/validate"
-        hx-target="next .error"
+        hx-target="#form-errors"
         hx-trigger="change, keyup delay:200ms changed"
+        hx-include="[name='phone_number']"
         placeholder="Email"
         value="{% if let Some(c) = contact %}{{ c.email }}{% endif %}">
-      <span class="error color bad"></span>
     </p>
     <p>
       <label for="first_name">First Name</label>
       <input type="text" name="first_name" id="first_name" 
         placeholder="First Name"
         value="{% if let Some(c) = contact %}{{ c.first_name }}{% endif %}">
-      <span class="error color bad"></span>
     </p>
     <p>
       <label for="last_name">Last Name</label>
       <input type="text" name="last_name" id="last_name" 
         placeholder="Last Name"
         value="{% if let Some(c) = contact %}{{ c.last_name }}{% endif %}">
-      <span class="error color bad"></span>
     </p>
     <p>
       <label for="phone_number">Phone</label>
       <input type="text" name="phone_number" id="phone_number" 
         hx-get="/contacts/validate"
-        hx-target="next .error"
+        hx-target="#form-errors"
         hx-trigger="change, keyup delay:200ms changed"
+        hx-include="[name='email']"
         placeholder="Phone"
         value="{% if let Some(c) = contact %}{{ c.phone_number }}{% endif %}">
-      <span class="error color bad"></span>
     </p>
     <button id="submit-btn">Save</button>
     <div id="result"></div>
